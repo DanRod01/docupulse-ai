@@ -216,3 +216,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Node & Nuxt
+node_modules/
+.nuxt/
+.output/
+.nitro/
+dist/
+.env
+.env.*
+!.env.example
+
