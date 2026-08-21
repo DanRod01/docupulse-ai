@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from typing import Union
 from fastapi import HTTPException, status
 from google import genai
@@ -65,12 +66,36 @@ class GeminiVisionService:
         assert self._client is not None
         image_part = types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
 
-        response = self._client.models.generate_content(
-            model=self.model_name,
-            contents=[image_part, VISION_EXTRACTION_PROMPT],
-        )
+        for attempt in range(3):
+            try:
+                response = self._client.models.generate_content(
+                    model=self.model_name,
+                    contents=[image_part, VISION_EXTRACTION_PROMPT],
+                )
+                return response.text or "Nenhum texto pôde ser extraído da imagem fornecida."
+            except Exception as exc:
+                if not self._is_retryable_error(exc) or attempt == 2:
+                    raise
+                delay = 2**attempt
+                logger.warning(
+                    "Gemini Vision indisponível (tentativa %d/3). Nova tentativa em %d s: %s",
+                    attempt + 1,
+                    delay,
+                    exc,
+                )
+                time.sleep(delay)
 
-        return response.text or "Nenhum texto pôde ser extraído da imagem fornecida."
+        raise RuntimeError("Não foi possível extrair texto da imagem.")
+
+    @staticmethod
+    def _is_retryable_error(exc: Exception) -> bool:
+        status_code = getattr(exc, "status_code", None)
+        if status_code is not None:
+            return status_code in {429, 500, 502, 503, 504}
+        return any(
+            f"{code} " in str(exc) or f'"code": {code}' in str(exc)
+            for code in (429, 500, 502, 503, 504)
+        )
 
 
 vision_service = GeminiVisionService()
