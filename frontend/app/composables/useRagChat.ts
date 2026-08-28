@@ -14,7 +14,7 @@ export function useRagChat() {
   const isStreaming = ref<boolean>(false)
   const error = ref<string | null>(null)
   const selectedDocumentId = ref<string | null>(null)
-  const selectedModel = ref<string>('gemini-flash-latest')
+  const selectedModel = ref<string>('gemini-3.5-flash-lite')
   const vecWeight = ref<number>(0.6)
   const textWeight = ref<number>(0.4)
 
