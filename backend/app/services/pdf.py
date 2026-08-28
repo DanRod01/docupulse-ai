@@ -42,21 +42,8 @@ class PDFExtractionService:
     ) -> str:
         """
         Extrai texto de um PDF em bytes.
-        Retorna o conteúdo completo como texto/Markdown.
+        Retorna o conteúdo completo como texto/Markdown de forma assíncrona.
         """
-        return await asyncio.to_thread(
-            self._sync_extract,
-            pdf_bytes,
-            filename,
-            vision_service,
-        )
-
-    def _sync_extract(
-        self,
-        pdf_bytes: bytes,
-        filename: str,
-        vision_service: Union["GeminiVisionService", None],  # type: ignore[name-defined]
-    ) -> str:
         doc: fitz.Document = fitz.open(stream=pdf_bytes, filetype="pdf")
         total_pages = doc.page_count
         logger.info("Iniciando extração de PDF '%s' (%d páginas).", filename, total_pages)
@@ -84,18 +71,10 @@ class PDFExtractionService:
                 if vision_service is not None and vision_service.is_configured:
                     try:
                         png_bytes = self._render_page_as_png(page)
-                        # Executa OCR via Gemini Vision (síncrono aqui pois estamos em thread)
-                        loop = asyncio.new_event_loop()
-                        try:
-                            ocr_text = loop.run_until_complete(
-                                vision_service.extract_text_from_image(
-                                    image_bytes=png_bytes,
-                                    mime_type="image/png",
-                                )
-                            )
-                        finally:
-                            loop.close()
-
+                        ocr_text = await vision_service.extract_text_from_image(
+                            image_bytes=png_bytes,
+                            mime_type="image/png",
+                        )
                         page_results.append(
                             PDFPageResult(
                                 page_number=page_number,

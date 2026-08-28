@@ -16,8 +16,8 @@ class RAGQueryRequest(BaseModel):
         description="Filtro opcional para limitar o RAG a um único documento",
     )
     model_name: str = Field(
-        default="gemini-2.5-flash",
-        description="Modelo do Google Gemini a ser utilizado (ex: gemini-2.5-flash, gemini-1.5-pro)",
+        default="gemini-3.5-flash-lite",
+        description="Modelo do Google Gemini a ser utilizado (ex: gemini-3.5-flash-lite, gemini-3.5-flash, gemini-3.7-flash)",
     )
     temperature: float = Field(
         default=0.2,

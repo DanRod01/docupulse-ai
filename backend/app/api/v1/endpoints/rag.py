@@ -24,7 +24,7 @@ async def retrieve_sources_for_rag(
         select 
             c.id, c.document_id, c.chunk_index, c.content, c.metadata, h.combined_score,
             d.filename as doc_filename, d.title as doc_title
-        from hybrid_search_chunks(%s, %s, %s, 60, %s, %s) h
+        from hybrid_search_chunks(%s::text, %s::vector, %s::int, 60, %s::float8, %s::float8) h
         join document_chunks c on h.id = c.id
         join documents d on c.document_id = d.id
         where c.document_id = %s;
@@ -42,7 +42,7 @@ async def retrieve_sources_for_rag(
         select 
             c.id, c.document_id, c.chunk_index, c.content, c.metadata, h.combined_score,
             d.filename as doc_filename, d.title as doc_title
-        from hybrid_search_chunks(%s, %s, %s, 60, %s, %s) h
+        from hybrid_search_chunks(%s::text, %s::vector, %s::int, 60, %s::float8, %s::float8) h
         join document_chunks c on h.id = c.id
         join documents d on c.document_id = d.id;
         """

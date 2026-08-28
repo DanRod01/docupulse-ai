@@ -68,11 +68,11 @@ class RAGService:
         self,
         query: str,
         sources: list[RAGSourceItem],
-        model_name: str = "gemini-flash-latest",
+        model_name: Union[str, None] = None,
         temperature: float = 0.2,
         system_instruction: str = DEFAULT_SYSTEM_INSTRUCTION,
     ) -> AsyncIterator[str]:
-        """Gera a resposta em streaming transmitindo eventos SSE no formato data: JSON\\n\\n."""
+        """Gera a resposta em streaming transmitindo eventos SSE no formato data: JSON\\n\\n de forma assíncrona."""
         if not self.is_configured or self._client is None:
             err_payload = json.dumps(
                 {
@@ -82,6 +82,8 @@ class RAGService:
             )
             yield f"data: {err_payload}\n\n"
             return
+
+        active_model = model_name or settings.GEMINI_MODEL_NAME or "gemini-3.5-flash-lite"
 
         # 1. Primeiro evento SSE: Envia todas as fontes recuperadas para renderização de citações
         sources_payload = json.dumps(
@@ -102,18 +104,14 @@ class RAGService:
         total_tokens_estimated = 0
 
         try:
-            # 2. Executa a stream do Gemini em background thread
-            loop = asyncio.get_running_loop()
-            stream_response = await loop.run_in_executor(
-                None,
-                lambda: self._client.models.generate_content_stream(
-                    model=model_name,
-                    contents=prompt,
-                    config=config,
-                ),
+            # 2. Executa a stream assíncrona do Gemini
+            stream_response = await self._client.aio.models.generate_content_stream(
+                model=active_model,
+                contents=prompt,
+                config=config,
             )
 
-            for chunk in stream_response:
+            async for chunk in stream_response:
                 if chunk.text:
                     token_payload = json.dumps(
                         {
@@ -123,8 +121,6 @@ class RAGService:
                     )
                     total_tokens_estimated += max(1, len(chunk.text) // 4)
                     yield f"data: {token_payload}\n\n"
-                    # Pequeno yield cooperativo para liberar o event loop
-                    await asyncio.sleep(0)
 
             # 3. Evento final SSE: Sinaliza término e métricas
             elapsed_ms = (time.perf_counter() - start_time) * 1000
@@ -132,7 +128,7 @@ class RAGService:
                 {
                     "event_type": "done",
                     "data": {
-                        "model_used": model_name,
+                        "model_used": active_model,
                         "execution_time_ms": round(elapsed_ms, 2),
                         "total_tokens_estimated": total_tokens_estimated,
                     },
@@ -141,11 +137,11 @@ class RAGService:
             yield f"data: {done_payload}\n\n"
 
         except Exception as exc:
-            logger.error(f"Erro durante streaming do Gemini: {exc}")
+            logger.error("Erro durante streaming do Gemini com modelo %s: %s", active_model, exc)
             err_payload = json.dumps(
                 {
                     "event_type": "error",
-                    "data": f"Erro na geração da resposta com o modelo Gemini: {str(exc)}",
+                    "data": f"Erro na geração da resposta com o modelo Gemini ({active_model}): {str(exc)}",
                 }
             )
             yield f"data: {err_payload}\n\n"
@@ -154,30 +150,27 @@ class RAGService:
         self,
         query: str,
         sources: list[RAGSourceItem],
-        model_name: str = "gemini-flash-latest",
+        model_name: Union[str, None] = None,
         temperature: float = 0.2,
         system_instruction: str = DEFAULT_SYSTEM_INSTRUCTION,
     ) -> str:
-        """Gera resposta completa de forma síncrona/unificada (sem stream)."""
+        """Gera resposta completa de forma assíncrona/unificada (sem stream)."""
         if not self.is_configured or self._client is None:
             raise RuntimeError(
                 "GEMINI_API_KEY não configurada. Defina a variável de ambiente no backend/.env."
             )
 
+        active_model = model_name or settings.GEMINI_MODEL_NAME or "gemini-3.5-flash-lite"
         prompt = self.build_augmented_prompt(query, sources)
         config = types.GenerateContentConfig(
             system_instruction=system_instruction,
             temperature=temperature,
         )
 
-        loop = asyncio.get_running_loop()
-        response = await loop.run_in_executor(
-            None,
-            lambda: self._client.models.generate_content(
-                model=model_name,
-                contents=prompt,
-                config=config,
-            ),
+        response = await self._client.aio.models.generate_content(
+            model=active_model,
+            contents=prompt,
+            config=config,
         )
         return response.text or ""
 

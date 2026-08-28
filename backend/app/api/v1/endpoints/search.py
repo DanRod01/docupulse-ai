@@ -43,7 +43,7 @@ async def perform_hybrid_search(
         if request.document_id:
             sql_query = """
             select id, document_id, chunk_index, content, metadata, combined_score
-            from hybrid_search_chunks(%s, %s, %s, %s, %s, %s)
+            from hybrid_search_chunks(%s::text, %s::vector, %s::int, %s::int, %s::float8, %s::float8)
             where document_id = %s;
             """
             params = (
@@ -58,7 +58,7 @@ async def perform_hybrid_search(
         else:
             sql_query = """
             select id, document_id, chunk_index, content, metadata, combined_score
-            from hybrid_search_chunks(%s, %s, %s, %s, %s, %s);
+            from hybrid_search_chunks(%s::text, %s::vector, %s::int, %s::int, %s::float8, %s::float8);
             """
             params = (
                 request.query,

@@ -28,6 +28,8 @@ class Settings(BaseSettings):
 
     # Google AI Studio
     GEMINI_API_KEY: str = ""
+    GEMINI_MODEL_NAME: str = "gemini-3.5-flash-lite"
+    GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"
 
     # Supabase / PostgreSQL
     DATABASE_URL: str = ""
