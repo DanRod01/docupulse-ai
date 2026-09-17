@@ -1,7 +1,7 @@
 from typing import Literal, Union
 from uuid import UUID
 from datetime import datetime
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 DocumentStatus = Literal["pending", "processing", "completed", "failed"]
 MetadataValue = Union[str, int, float, bool, None]
@@ -20,6 +20,12 @@ class ChunkingConfig(BaseModel):
         le=1000,
         description="Quantidade de caracteres sobrepostos entre fragmentos adjacentes",
     )
+
+    @model_validator(mode="after")
+    def validate_overlap(self) -> "ChunkingConfig":
+        if self.chunk_overlap >= self.chunk_size:
+            raise ValueError("chunk_overlap deve ser estritamente menor que chunk_size")
+        return self
 
 
 class ChunkItem(BaseModel):

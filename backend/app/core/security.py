@@ -1,4 +1,5 @@
 import logging
+import secrets
 from fastapi import Header, HTTPException, status
 from app.core.config import settings
 
@@ -12,7 +13,7 @@ def verify_api_key(x_api_key: str = Header(default="")) -> None:
     Dependency FastAPI para validar o header X-Api-Key em todas as rotas protegidas.
 
     - Se API_KEY não estiver configurada no .env → modo desenvolvimento permissivo (apenas aviso).
-    - Se API_KEY estiver configurada → validação estrita (401 em caso de falha).
+    - Se API_KEY estiver configurada → validação estrita em tempo constante contra timing attacks (401 em caso de falha).
     """
     global _DEV_MODE_WARNED
 
@@ -25,7 +26,8 @@ def verify_api_key(x_api_key: str = Header(default="")) -> None:
             _DEV_MODE_WARNED = True
         return
 
-    if not x_api_key or x_api_key != settings.API_KEY:
+    # Comparação em tempo constante (protege contra timing attacks)
+    if not x_api_key or not secrets.compare_digest(x_api_key, settings.API_KEY):
         logger.warning(
             "Tentativa de acesso com API Key inválida ou ausente. "
             "Header X-Api-Key recebido: %s",

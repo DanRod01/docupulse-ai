@@ -88,9 +88,33 @@ flowchart TD
 
 ---
 
-## ⚙️ Como Executar o Projeto Localmente
+## ⚙️ Como Executar o Projeto
 
-### Pré-requisitos
+### 🐳 Opção Recomendada: Docker Compose (1 Comando)
+
+Com o Docker instalado, você sobe o banco de dados PostgreSQL com `pgvector` pré-configurado, o backend FastAPI e o frontend Nuxt de forma integrada:
+
+```bash
+# 1. Clone o repositório
+git clone https://github.com/DanRod01/docupulse-ai.git
+cd docupulse-ai
+
+# 2. Configure a sua chave do Gemini
+export GEMINI_API_KEY="sua_chave_aqui"  # Linux/macOS
+$env:GEMINI_API_KEY="sua_chave_aqui"    # Windows PowerShell
+
+# 3. Inicie todos os serviços com orquestração automática
+docker compose up -d --build
+```
+> * Frontend: `http://localhost:3000`  
+> * Swagger UI: `http://localhost:8000/docs`  
+> * PostgreSQL + pgvector: `localhost:5432` (migrações SQL e funções RRF aplicadas automaticamente na inicialização)
+
+---
+
+### 💻 Opção 2: Execução Manual Local
+
+#### Pré-requisitos
 * Python 3.11 ou superior
 * Node.js 18+ e npm
 * Instância do PostgreSQL com extensão `pgvector` ativa (ex: Supabase ou PostgreSQL local)
@@ -98,7 +122,7 @@ flowchart TD
 
 ---
 
-### 1. Configurar o Banco de Dados
+#### 1. Configurar o Banco de Dados
 Execute o script de migração SQL no seu banco PostgreSQL:
 * Arquivo: `backend/app/db/migrations/001_initial_schema.sql`
 
@@ -163,6 +187,17 @@ npm run dev
 | `POST` | `/api/v1/rag/stream` | Chat RAG com streaming SSE em tempo real |
 | `POST` | `/api/v1/search/hybrid` | Busca híbrida direta com ranking RRF |
 | `GET` | `/api/v1/health` | Diagnóstico de integridade do banco e chaves de IA |
+
+---
+
+## 🧪 Testes Automatizados
+
+O backend conta com uma suíte de testes unitários automatizados com `pytest`:
+
+```bash
+cd backend
+python -m pytest -v
+```
 
 ---
 

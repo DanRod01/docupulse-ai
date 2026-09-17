@@ -1,0 +1,80 @@
+# ==============================================================================
+# DocuPulse AI - Docker Compose Orchestration
+# Sobe banco com pgvector, backend FastAPI e frontend Nuxt 4 de forma integrada.
+# ==============================================================================
+services:
+  # ── 1. Banco de Dados PostgreSQL 16 com extensão pgvector ───────────────────
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: docupulse-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: docupulse
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Executa a migração e funções RRF automaticamente na primeira inicialização
+      - ./backend/app/db/migrations/001_initial_schema.sql:/docker-entrypoint-initdb.d/001_initial_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d docupulse"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - docupulse-net
+
+  # ── 2. Backend FastAPI + Python 3.11 ────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: docupulse-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PROJECT_NAME: "DocuPulse AI"
+      API_V1_STR: "/api/v1"
+      DATABASE_URL: "postgresql://postgres:postgrespassword@db:5432/docupulse"
+      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
+      GEMINI_MODEL_NAME: "gemini-3.5-flash-lite"
+      GEMINI_EMBEDDING_MODEL: "gemini-embedding-001"
+      API_KEY: "${API_KEY:-docupulse-dev-secret-2024}"
+      BACKEND_CORS_ORIGINS: '["http://localhost:3000", "http://127.0.0.1:3000"]'
+      MAX_UPLOAD_SIZE_MB: 20
+    ports:
+      - "8000:8000"
+    networks:
+      - docupulse-net
+
+  # ── 3. Frontend Nuxt 4 / Vue 3 ──────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NUXT_PUBLIC_API_BASE_URL: "http://localhost:8000/api/v1"
+        NUXT_PUBLIC_API_KEY: "docupulse-dev-secret-2024"
+    container_name: docupulse-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      PORT: 3000
+      HOST: "0.0.0.0"
+    ports:
+      - "3000:3000"
+    networks:
+      - docupulse-net
+
+volumes:
+  pgdata:
+    driver: local
+
+networks:
+  docupulse-net:
+    driver: bridge
