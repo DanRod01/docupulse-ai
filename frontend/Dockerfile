@@ -4,7 +4,7 @@
 # ==============================================================================
 
 # ── Estágio 1: Build da aplicação ─────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -25,7 +25,7 @@ ENV NUXT_PUBLIC_API_BASE_URL=$NUXT_PUBLIC_API_BASE_URL \
 RUN npm run build
 
 # ── Estágio 2: Imagem final enxuta de execução ────────────────────────────────
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 WORKDIR /app
 
